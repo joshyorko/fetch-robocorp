@@ -15,7 +15,6 @@ jobs:
           curl -o rcc https://cdn.sema4.ai/rcc/releases/latest/linux64/rcc
           chmod +x rcc
           
-
       - name: Make start.sh executable
         run: |
           chmod +x start.sh;
@@ -27,4 +26,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: robocorp-repositories
-          path: output/results.zip
+          path: output/repos.zip
