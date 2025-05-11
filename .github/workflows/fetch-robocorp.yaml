@@ -23,7 +23,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: robocorp-repositories
-          path: output/repos.zip
+          path: output/
           retention-days: 7
 
       - name: Cleanup workspace
