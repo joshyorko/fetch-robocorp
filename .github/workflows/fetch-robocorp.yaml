@@ -9,11 +9,17 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          clean: true
+
 
       - name: Download RCC
+      # download rcc only if it is not already present
         run: |
-          curl -o rcc https://cdn.sema4.ai/rcc/releases/latest/linux64/rcc
-          chmod +x rcc
+          if [ ! -f rcc ]; then
+            curl -o rcc https://cdn.sema4.ai/rcc/releases/latest/linux64/rcc
+            chmod +x rcc
+          fi
           
       - name: Make start.sh executable
         run: |
@@ -27,3 +33,9 @@ jobs:
         with:
           name: robocorp-repositories
           path: output/repos.zip
+
+      - name: Cleanup workspace
+        if: always()
+        run: |
+          rm -rf output/*
+          rm -f rcc
