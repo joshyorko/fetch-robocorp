@@ -1,6 +1,8 @@
 [
   {
-    "payload": {},
+    "payload": {
+      "repo": "robocorp"
+    },
     "files": {
       "repos.csv": "repos.csv"
     }
