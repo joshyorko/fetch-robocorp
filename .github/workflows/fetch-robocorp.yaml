@@ -14,8 +14,9 @@ jobs:
         run: |
           curl -o rcc https://cdn.sema4.ai/rcc/releases/latest/linux64/rcc
           chmod +x rcc
+          sudo mv rcc /usr/local/bin/rcc
 
-      - name: Run robot
+      - name: Make start.sh executable
         run: |
           chmod +x start.sh;
 
