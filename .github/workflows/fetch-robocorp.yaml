@@ -1,0 +1,26 @@
+name: Fetch Robocorp Repositories and zip them
+
+on:
+  workflow_dispatch:
+
+jobs:
+  run-robot:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download RCC
+        run: |
+          curl -o rcc https://downloads.sema4.ai/releases/latest/linux64/rcc
+          chmod +x rcc
+
+      - name: Run robot
+        run: |
+          ./rcc run
+
+      - name: Upload zip file
+        uses: actions/upload-artifact@v4
+        with:
+          name: robocorp-repositories
+          path: output/results.zip
