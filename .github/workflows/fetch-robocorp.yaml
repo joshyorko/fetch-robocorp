@@ -12,11 +12,15 @@ jobs:
 
       - name: Download RCC
         run: |
-          chmod +x start.sh
+          curl -o rcc https://cdn.sema4.ai/rcc/releases/latest/linux64/rcc
+          chmod +x rcc
 
       - name: Run robot
         run: |
-          ./start.sh
+          chmod +x start.sh;
+
+      - name: Run start.sh
+        run: ./start.sh
 
       - name: Upload zip file
         uses: actions/upload-artifact@v4
