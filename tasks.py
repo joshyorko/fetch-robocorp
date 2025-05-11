@@ -15,7 +15,7 @@ from fetch_repos import fetch_github_repos
 def repos():
     """Fetches the list of repositories from GitHub and saves it to a CSV file."""
     for item in workitems.inputs:
-        org = item.payload.get("repo")
+        org = item.payload.get("org")
         if not org:
             raise ValueError("Organization name is required in the payload.")
         print(f"Fetching repositories for organization: {org}")
