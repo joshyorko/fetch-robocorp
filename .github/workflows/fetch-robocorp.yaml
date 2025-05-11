@@ -12,15 +12,6 @@ jobs:
         with:
           clean: true
 
-
-      - name: Download RCC
-      # download rcc only if it is not already present
-        run: |
-          if [ ! -f rcc ]; then
-            curl -o rcc https://cdn.sema4.ai/rcc/releases/latest/linux64/rcc
-            chmod +x rcc
-          fi
-          
       - name: Make start.sh executable
         run: |
           chmod +x start.sh;
@@ -38,4 +29,4 @@ jobs:
         if: always()
         run: |
           rm -rf output/*
-          rm -f rcc
+    
