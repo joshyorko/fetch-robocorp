@@ -1,8 +1,25 @@
 import requests
 import pandas as pd
 
-def fetch_github_repos(org="robocorp"):
-    url = f"https://api.github.com/orgs/{org}/repos"
+def fetch_github_repos(entity="robocorp", entity_type=None):
+    """
+    Fetch public repositories from a GitHub organization or user.
+    
+    Args:
+        entity (str): The name of the organization or user
+        entity_type (str, optional): Type of entity ('org' or 'user'). If None, will auto-detect.
+    """
+    # Auto-detect entity type if not specified
+    if entity_type is None:
+        # Try to determine if it's an org or user
+        test_url = f"https://api.github.com/orgs/{entity}"
+        test_response = requests.get(test_url)
+        entity_type = "org" if test_response.status_code == 200 else "user"
+    
+    # Set the appropriate API endpoint
+    base_url = "https://api.github.com"
+    url = f"{base_url}/{'orgs' if entity_type == 'org' else 'users'}/{entity}/repos"
+    
     per_page = 100
     headers = {
         "Accept": "application/vnd.github.v3+json",
@@ -66,5 +83,11 @@ def fetch_github_repos(org="robocorp"):
 
 if __name__ == "__main__":
     import sys
-    org = sys.argv[1] if len(sys.argv) > 1 else "robocorp"
-    fetch_github_repos(org)
+    if len(sys.argv) > 2:
+        entity = sys.argv[1]
+        entity_type = sys.argv[2] if sys.argv[2] in ['org', 'user'] else None
+    else:
+        entity = sys.argv[1] if len(sys.argv) > 1 else "robocorp"
+        entity_type = None
+    
+    fetch_github_repos(entity, entity_type)
