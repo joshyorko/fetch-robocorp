@@ -4,8 +4,8 @@ on:
   workflow_dispatch:
 
 jobs:
-  run-robot:
-    runs-on: ubuntu-latest
+  fetch-robocorp:
+    runs-on: self-hosted
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
