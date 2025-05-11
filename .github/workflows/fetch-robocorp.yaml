@@ -12,7 +12,7 @@ jobs:
 
       - name: Download RCC
         run: |
-          curl -o rcc https://downloads.sema4.ai/releases/latest/linux64/rcc
+          curl -o rcc https://cdn.sema4.ai/rcc/releases/latest/linux64/rcc
           chmod +x rcc
 
       - name: Run robot
