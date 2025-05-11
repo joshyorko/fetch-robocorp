@@ -24,9 +24,10 @@ jobs:
         with:
           name: robocorp-repositories
           path: output/repos.zip
+          retention-days: 7
 
       - name: Cleanup workspace
         if: always()
         run: |
           rm -rf output/*
-    
+
