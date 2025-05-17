@@ -25,31 +25,31 @@ def repos():
 @task
 def producer():
     """Split Csv rows into multiple output Work Items for the next step."""
-
     output = get_output_dir() or Path("output")
-    filename = "repos.csv"
-    
-    for item in workitems.inputs:
-        # Read the CSV file
-        path = item.get_file(filename, output / filename)
-        if not path.exists():
-            raise FileNotFoundError(f"File {filename} not found in {path}")
-        df = pd.read_csv(path)
-        # Convert DataFrame to list of dictionaries
-        rows = df.to_dict(orient="records")
-        for row in rows:
-            payload = {
-                "Name": row["Name"],
-                "URL": row["URL"],
-                "Description": row["Description"],
-                "Created": row["Created"],
-                "Last Updated": row["Last Updated"],
-                "Language": row["Language"],
-                "Stars": row["Stars"],
-                "Is Fork": row["Is Fork"]
-            }
-            # Create a new work item with the payload
-            workitems.outputs.create(payload)
+    outputs_created = False
+    for input_item in workitems.inputs:
+        files = input_item.get_files("*.csv", output)
+        for file in files:
+            if not file.exists():
+                print(f"File {file} not found.")
+                continue
+            df = pd.read_csv(file)
+            rows = df.to_dict(orient="records")
+            for row in rows:
+                payload = {
+                    "Name": row.get("Name"),
+                    "URL": row.get("URL"),
+                    "Description": row.get("Description"),
+                    "Created": row.get("Created"),
+                    "Last Updated": row.get("Last Updated"),
+                    "Language": row.get("Language"),
+                    "Stars": row.get("Stars"),
+                    "Is Fork": row.get("Is Fork")
+                }
+                workitems.outputs.create(payload)
+                outputs_created = True
+    if not outputs_created:
+        print("No output work items were created. Check if the CSV files exist and have data.")
 
 
 @task
@@ -65,14 +65,23 @@ def consumer():
     
     for item in workitems.inputs:
         try:
-            url = item.payload["URL"]
+            payload = item.payload
+            if not isinstance(payload, dict):
+                print(f"Skipping item with non-dict payload: {payload}")
+                item.fail("APPLICATION", code="INVALID_PAYLOAD", message="Payload is not a dict.")
+                continue
+            url = payload.get("URL")
+            if not url:
+                print(f"Skipping item with missing URL: {payload}")
+                item.fail("APPLICATION", code="MISSING_URL", message="URL is missing in payload.")
+                continue
             repo_name = url.split('/')[-1].replace('.git', '')
             repo_path = repos_dir / repo_name
             print(f"Cloning repository: {repo_name}")
             
             try:
-                # Clone with GitPython, showing progress
-                Repo.clone_from(url, repo_path, progress=git.RemoteProgress())
+                # Clone with GitPython, showing progress (if supported)
+                Repo.clone_from(url, repo_path)
                 print(f"Successfully cloned: {repo_name}")
                 item.done()
             except GitCommandError as git_err:
