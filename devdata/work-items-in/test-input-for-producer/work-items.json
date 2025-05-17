@@ -4,7 +4,8 @@
       "org": "robocorp"
     },
     "files": {
-      "repos.csv": "repos.csv"
+      "robocorp.csv": "robocorp.csv",
+      "sema4ai.csv": "sema4ai.csv"
     }
   }
 ]
