@@ -1,15 +1,20 @@
-from pathlib import Path
-from robocorp import workitems
-from robocorp.tasks import get_output_dir, task
-import pandas as pd
-import shutil
 import os
-import git
-from git import Repo
-from git.exc import GitCommandError
-from fetch_repos import fetch_github_repos
+import subprocess
+import shutil
+import json
+import pathlib
+import zipfile
+from robocorp import task, workitems
+from robocorp.tasks import get_output_dir # Keep this if repos task is kept
+import pandas as pd # Keep this if repos task is kept
+from git import Repo # Keep this if repos task is kept
+from git.exc import GitCommandError # Keep this if repos task is kept
+from fetch_repos import fetch_github_repos # Keep this if repos task is kept
 
-
+# ---------- NEW: local FileAdapter ----------
+os.environ["RC_WORKITEM_ADAPTER"] = "FileAdapter"
+os.environ["RC_WORKITEM_INPUT_PATH"]  = "/tmp/input.json"
+os.environ["RC_WORKITEM_OUTPUT_PATH"] = "/tmp/output.json"
 
 @task
 def repos():
@@ -22,96 +27,32 @@ def repos():
         break
     return fetch_github_repos(org)
 
+# ---------- PRODUCER ----------
 @task
 def producer():
-    """Split Csv rows into multiple output Work Items for the next step."""
-    output = get_output_dir() or Path("output")
-    outputs_created = False
-    for input_item in workitems.inputs:
-        files = input_item.get_files("*.csv", output)
-        for file in files:
-            if not file.exists():
-                print(f"File {file} not found.")
-                continue
-            df = pd.read_csv(file)
-            rows = df.to_dict(orient="records")
-            for row in rows:
-                payload = {
-                    "Name": row.get("Name"),
-                    "URL": row.get("URL"),
-                    "Description": row.get("Description"),
-                    "Created": row.get("Created"),
-                    "Last Updated": row.get("Last Updated"),
-                    "Language": row.get("Language"),
-                    "Stars": row.get("Stars"),
-                    "Is Fork": row.get("Is Fork")
-                }
-                workitems.outputs.create(payload)
-                outputs_created = True
-    if not outputs_created:
-        print("No output work items were created. Check if the CSV files exist and have data.")
+    """Read repos.txt and emit one work item per repo URL."""
+    repos = pathlib.Path("repos.txt").read_text().splitlines()
+    for repo in filter(None, map(str.strip, repos)):
+        wi = workitems.outputs.create()
+        wi.payload = {"repo": repo}
 
-
+# ---------- CONSUMER ----------
 @task
 def consumer():
-    """Clones all the repositories from the input Work Items and zips them and saves them to the output directory."""
-    output = get_output_dir() or Path("output")
-    filename = "repos.zip"
-    repos_dir = output / "repos"
-    output_path = output / filename
+    """Clone repo, zip it, attach as file."""
+    workspace = pathlib.Path("/tmp/workspace")
+    workspace.mkdir(parents=True, exist_ok=True)
 
-    # Create output directories if they don't exist
-    repos_dir.mkdir(parents=True, exist_ok=True)
-    
-    for item in workitems.inputs:
-        try:
-            payload = item.payload
-            if not isinstance(payload, dict):
-                print(f"Skipping item with non-dict payload: {payload}")
-                item.fail("APPLICATION", code="INVALID_PAYLOAD", message="Payload is not a dict.")
-                continue
-            url = payload.get("URL")
-            if not url:
-                print(f"Skipping item with missing URL: {payload}")
-                item.fail("APPLICATION", code="MISSING_URL", message="URL is missing in payload.")
-                continue
-            repo_name = url.split('/')[-1].replace('.git', '')
-            repo_path = repos_dir / repo_name
-            print(f"Cloning repository: {repo_name}")
-            
-            try:
-                # Clone with GitPython, showing progress (if supported)
-                Repo.clone_from(url, repo_path)
-                print(f"Successfully cloned: {repo_name}")
-                item.done()
-            except GitCommandError as git_err:
-                error_msg = f"Git error while cloning {repo_name}: {str(git_err)}"
-                print(error_msg)
-                item.fail("BUSINESS", code="GIT_ERROR", message=error_msg)
-                continue
-                
-        except AssertionError as err:
-            item.fail("BUSINESS", code="INVALID_ORDER", message=str(err))
-        except KeyError as err:
-            item.fail("APPLICATION", code="MISSING_FIELD", message=str(err))
-    
-    # Get all directories that are git repositories in the repos directory
-    git_repos = [d for d in os.listdir(repos_dir) if os.path.isdir(os.path.join(repos_dir, d)) 
-                 and os.path.exists(os.path.join(repos_dir, d, '.git'))]
-    
-    if git_repos:
-        print(f"Creating zip archive of {len(git_repos)} repositories...")
-        try:
-            # Create the zip file containing all repositories
-            shutil.make_archive(str(output_path.with_suffix('')), 'zip', 
-                              root_dir=str(repos_dir), base_dir=None)
-            print(f"Successfully created archive at: {output_path}")
-            
-            # Clean up: remove the cloned repositories after zipping
-            print("Cleaning up cloned repositories...")
-            shutil.rmtree(repos_dir)
-            print("Cleanup complete")
-        except Exception as e:
-            print(f"Error during archive creation or cleanup: {str(e)}")
-            raise
-
+    for wi in workitems.inputs:
+        url = wi.payload["repo"]
+        name = url.rsplit("/", 1)[-1].replace(".git", "")
+        repo_dir = workspace / name
+        subprocess.run(["git", "clone", "--depth", "1", url, str(repo_dir)],
+                       check=True)
+        zip_path = workspace / f"{name}.zip"
+        with zipfile.ZipFile(zip_path, "w") as zf:
+            for p in repo_dir.rglob("*"):
+                zf.write(p, p.relative_to(repo_dir))
+        wi.files.add_local_file("archive", zip_path)
+        wi.done()
+        shutil.rmtree(repo_dir)
