@@ -5,7 +5,7 @@ on:
 
 jobs:
   build:
-    runs-on: slot-01
+    runs-on: arc-runner-myrepo
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -16,7 +16,7 @@ jobs:
 
   deploy:
     needs: build
-    runs-on: slot-01
+    runs-on: arc-runner-myrepo
     steps:
       - name: Make start.sh executable
         run: chmod +x start.sh
@@ -31,4 +31,3 @@ jobs:
       - name: Cleanup workspace
         if: always()
         run: rm -rf output/*
-
