@@ -1,10 +1,10 @@
-name: Robocorp ARC Workflow
+name: Robocorp ARC Single-Job Workflow
 
 on:
   workflow_dispatch:
 
 jobs:
-  build:
+  run:
     runs-on: arc-runner-myrepo
     steps:
       - name: Checkout repository
@@ -23,67 +23,14 @@ jobs:
             echo "RCC is already installed."
           fi
 
-      - name: Build holotree
-        run: rcc holotree vars
+      - name: Make start.sh executable
+        run: chmod +x start.sh
 
-  producer:
-    needs: build
-    runs-on: arc-runner-myrepo
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          clean: true
+      - name: Run start.sh
+        run: ./start.sh
 
-      - name: Ensure RCC is installed
-        run: |
-          if ! command -v rcc &> /dev/null; then
-            echo "RCC not found. Downloading..."
-            curl -o rcc https://downloads.robocorp.com/rcc/releases/latest/linux64/rcc
-            chmod +x rcc
-            sudo mv rcc /usr/local/bin/
-          else
-            echo "RCC is already installed."
-          fi
-
-      - name: Run Producer
-        run: |
-          rcc run -t producer -e devdata/env-for-producer.json
-          # Assuming your producer creates a file called workitems.json
-          # If it’s named differently, adjust as needed
-
-      - name: Upload Workitems
+      - name: Upload output directory
         uses: actions/upload-artifact@v4
         with:
-          name: workitems
-          path: output/producer-to-consumer/work-items.json
-
-  consumer:
-    needs: producer
-    runs-on: arc-runner-myrepo
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          clean: true
-
-      - name: Ensure RCC is installed
-        run: |
-          if ! command -v rcc &> /dev/null; then
-            echo "RCC not found. Downloading..."
-            curl -o rcc https://downloads.robocorp.com/rcc/releases/latest/linux64/rcc
-            chmod +x rcc
-            sudo mv rcc /usr/local/bin/
-          else
-            echo "RCC is already installed."
-          fi
-
-      - name: Download Workitems
-        uses: actions/download-artifact@v4
-        with:
-          name: workitems
-
-      - name: Run Consumer
-        run: |
-          # Assumes workitems.json is in the current directory now
-          rcc run -t consumer -e devdata/env-for-consumer.json
+          name: output
+          path: output/
