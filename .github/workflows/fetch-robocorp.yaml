@@ -56,7 +56,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: workitems
-          path: output/
+          path: output/producer-to-consumer/work-items.json
 
   consumer:
     needs: producer
