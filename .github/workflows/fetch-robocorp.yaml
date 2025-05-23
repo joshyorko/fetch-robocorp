@@ -1,4 +1,4 @@
-name: Fetch Robocorp Repositories and zip them
+name: Fetch Robocorp Repositories and Zip Them
 
 on:
   workflow_dispatch:
@@ -30,6 +30,11 @@ jobs:
     needs: build
     runs-on: arc-runner-myrepo
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          clean: true
+
       - name: Make start.sh executable
         run: chmod +x start.sh
 
