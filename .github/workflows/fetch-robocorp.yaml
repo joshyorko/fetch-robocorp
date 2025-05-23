@@ -1,4 +1,4 @@
-name: Fetch Robocorp Repositories and Zip Them
+name: Robocorp ARC Workflow
 
 on:
   workflow_dispatch:
@@ -23,10 +23,10 @@ jobs:
             echo "RCC is already installed."
           fi
 
-      - name: Run rcc holotree vars
+      - name: Build holotree
         run: rcc holotree vars
 
-  deploy:
+  producer:
     needs: build
     runs-on: arc-runner-myrepo
     steps:
@@ -35,19 +35,39 @@ jobs:
         with:
           clean: true
 
-      - name: Make start.sh executable
-        run: chmod +x start.sh
+      - name: Ensure RCC is installed
+        run: |
+          if ! command -v rcc &> /dev/null; then
+            echo "RCC not found. Downloading..."
+            curl -o rcc https://downloads.robocorp.com/rcc/releases/latest/linux64/rcc
+            chmod +x rcc
+            sudo mv rcc /usr/local/bin/
+          else
+            echo "RCC is already installed."
+          fi
 
-      - name: Run start.sh
-        run: ./start.sh
+      - name: Run Producer
+        run: rcc run -t producer -e devdata/env-for-producer.json
 
-      - name: Upload zip file
-        uses: actions/upload-artifact@v4
+  consumer:
+    needs: producer
+    runs-on: arc-runner-myrepo
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
         with:
-          name: robocorp-repositories
-          path: output/
-          retention-days: 7
+          clean: true
 
-      - name: Cleanup workspace
-        if: always()
-        run: rm -rf output/*
+      - name: Ensure RCC is installed
+        run: |
+          if ! command -v rcc &> /dev/null; then
+            echo "RCC not found. Downloading..."
+            curl -o rcc https://downloads.robocorp.com/rcc/releases/latest/linux64/rcc
+            chmod +x rcc
+            sudo mv rcc /usr/local/bin/
+          else
+            echo "RCC is already installed."
+          fi
+
+      - name: Run Consumer
+        run: rcc run -t consumer -e devdata/env-for-consumer.json
