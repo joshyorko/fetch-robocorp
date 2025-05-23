@@ -11,6 +11,18 @@ jobs:
         uses: actions/checkout@v4
         with:
           clean: true
+
+      - name: Ensure RCC is installed
+        run: |
+          if ! command -v rcc &> /dev/null; then
+            echo "RCC not found. Downloading..."
+            curl -o rcc https://downloads.robocorp.com/rcc/releases/latest/linux64/rcc
+            chmod +x rcc
+            sudo mv rcc /usr/local/bin/
+          else
+            echo "RCC is already installed."
+          fi
+
       - name: Run rcc holotree vars
         run: rcc holotree vars
 
@@ -20,14 +32,17 @@ jobs:
     steps:
       - name: Make start.sh executable
         run: chmod +x start.sh
+
       - name: Run start.sh
         run: ./start.sh
+
       - name: Upload zip file
         uses: actions/upload-artifact@v4
         with:
           name: robocorp-repositories
           path: output/
           retention-days: 7
+
       - name: Cleanup workspace
         if: always()
         run: rm -rf output/*
