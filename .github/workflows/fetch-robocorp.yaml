@@ -47,7 +47,16 @@ jobs:
           fi
 
       - name: Run Producer
-        run: rcc run -t producer -e devdata/env-for-producer.json
+        run: |
+          rcc run -t producer -e devdata/env-for-producer.json
+          # Assuming your producer creates a file called workitems.json
+          # If it’s named differently, adjust as needed
+
+      - name: Upload Workitems
+        uses: actions/upload-artifact@v4
+        with:
+          name: workitems
+          path: output/
 
   consumer:
     needs: producer
@@ -69,5 +78,12 @@ jobs:
             echo "RCC is already installed."
           fi
 
+      - name: Download Workitems
+        uses: actions/download-artifact@v4
+        with:
+          name: workitems
+
       - name: Run Consumer
-        run: rcc run -t consumer -e devdata/env-for-consumer.json
+        run: |
+          # Assumes workitems.json is in the current directory now
+          rcc run -t consumer -e devdata/env-for-consumer.json
