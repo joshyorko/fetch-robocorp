@@ -11,11 +11,14 @@ from fetch_repos import fetch_github_repos
 
 
 
-@task
+
 def repos():
     """Fetches the list of repositories from GitHub and saves it to a CSV file."""
     for item in workitems.inputs:
-        org = item.payload.get("org")
+        payload = item.payload
+        if not isinstance(payload, dict):
+            raise ValueError("Payload must be a dictionary")
+        org = payload.get("org")
         if not org:
             raise ValueError("Organization name is required in the payload.")
         print(f"Fetching repositories for organization: {org}")
@@ -26,30 +29,34 @@ def repos():
 def producer():
     """Split Csv rows into multiple output Work Items for the next step."""
     output = get_output_dir() or Path("output")
+    
+    # Get the DataFrame from repos() function
+    df = repos()
+    
     outputs_created = False
-    for input_item in workitems.inputs:
-        files = input_item.get_files("*.csv", output)
-        for file in files:
-            if not file.exists():
-                print(f"File {file} not found.")
-                continue
-            df = pd.read_csv(file)
-            rows = df.to_dict(orient="records")
-            for row in rows:
-                payload = {
-                    "Name": row.get("Name"),
-                    "URL": row.get("URL"),
-                    "Description": row.get("Description"),
-                    "Created": row.get("Created"),
-                    "Last Updated": row.get("Last Updated"),
-                    "Language": row.get("Language"),
-                    "Stars": row.get("Stars"),
-                    "Is Fork": row.get("Is Fork")
-                }
-                workitems.outputs.create(payload)
-                outputs_created = True
+    
+    if df is not None and not df.empty:
+        print(f"Processing {len(df)} repositories from DataFrame")
+        rows = df.to_dict(orient="records")
+        for row in rows:
+            payload = {
+                "Name": row.get("Name"),
+                "URL": row.get("URL"),
+                "Description": row.get("Description"),
+                "Created": row.get("Created"),
+                "Last Updated": row.get("Last Updated"),
+                "Language": row.get("Language"),
+                "Stars": row.get("Stars"),
+                "Is Fork": row.get("Is Fork")
+            }
+            workitems.outputs.create(payload)
+            outputs_created = True
+        print(f"Created {len(rows)} work items from DataFrame")
+    else:
+        print("No data received from repos() function")
+    
     if not outputs_created:
-        print("No output work items were created. Check if the CSV files exist and have data.")
+        print("No output work items were created. Check if repos() returned valid data.")
 
 
 @task
