@@ -2,10 +2,16 @@ name: Robocorp ARC Single-Job Workflow
 
 on:
   workflow_dispatch:
+    inputs:
+      org_name:
+        description: 'Organization name to fetch repositories from'
+        required: true
+        type: string
+        default: 'robocorp'
 
 jobs:
   run:
-    runs-on: arc-runner-myrepo
+    runs-on: arc-runner-fetch-repos-bot
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -28,9 +34,11 @@ jobs:
 
       - name: Run start.sh
         run: ./start.sh
+        env:
+          ORG_NAME: ${{ inputs.org_name }}
 
       - name: Upload output directory
         uses: actions/upload-artifact@v4
         with:
-          name: output
+          name: output-${{ inputs.org_name }}
           path: output/
